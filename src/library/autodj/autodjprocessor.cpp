@@ -1,5 +1,6 @@
 #include "library/autodj/autodjprocessor.h"
 
+#include "ai/aisettings.h"
 #include "engine/channels/enginedeck.h"
 #include "mixer/basetrackplayer.h"
 #include "mixer/playermanager.h"
@@ -114,6 +115,9 @@ AutoDJProcessor::AutoDJProcessor(
         int iAutoDJPlaylistId)
         : QObject(pParent),
           m_pConfig(pConfig),
+          m_pTrackCollectionManager(pTrackCollectionManager),
+          m_pAiSelector(std::make_unique<AiAutomixSelector>(
+                  pConfig, pTrackCollectionManager)),
           m_pAutoDJTableModel(nullptr),
           m_eState(ADJ_DISABLED),
           m_transitionProgress(0.0),
@@ -877,7 +881,53 @@ void AutoDJProcessor::playerPositionChanged(DeckAttributes* pAttributes,
     }
 }
 
+void AutoDJProcessor::maybeReorderQueueForAiAutomix() {
+    if (!m_pAiSelector || !mixxx::ai::isAutomixEnabled(m_pConfig)) {
+        return;
+    }
+    // The "from" deck holds the track currently driving the mix.
+    DeckAttributes* pFromDeck = getFromDeck();
+    if (!pFromDeck) {
+        return;
+    }
+    const TrackPointer pCurrentTrack = pFromDeck->getLoadedTrack();
+    if (!pCurrentTrack) {
+        return;
+    }
+
+    const int rowCount = m_pAutoDJTableModel->rowCount();
+    if (rowCount < 2) {
+        return; // nothing to reorder
+    }
+
+    QList<TrackPointer> candidates;
+    candidates.reserve(rowCount);
+    for (int row = 0; row < rowCount; ++row) {
+        TrackPointer pTrack = m_pAutoDJTableModel->getTrack(
+                m_pAutoDJTableModel->index(row, 0));
+        if (pTrack) {
+            candidates.append(pTrack);
+        }
+    }
+
+    const TrackPointer pBest =
+            m_pAiSelector->selectBestNext(pCurrentTrack, candidates);
+    if (!pBest) {
+        return; // no qualifying candidate -> keep existing order
+    }
+    const int bestRow = candidates.indexOf(pBest);
+    if (bestRow > 0) {
+        m_pAutoDJTableModel->moveTrack(
+                m_pAutoDJTableModel->index(bestRow, 0),
+                m_pAutoDJTableModel->index(0, 0));
+    }
+}
+
 TrackPointer AutoDJProcessor::getNextTrackFromQueue() {
+    // When AI Automix is on, bubble the best-matching track to the top before
+    // we read the queue.
+    maybeReorderQueueForAiAutomix();
+
     // Get the track at the top of the playlist.
     bool randomQueueEnabled = m_pConfig->getValue<bool>(
             ConfigKey(kPreferenceGroup, QStringLiteral("EnableRandomQueue")));

@@ -1,0 +1,144 @@
+#include "library/autodj/aiautomixselector.h"
+
+#include <algorithm>
+#include <cmath>
+
+#include "ai/aisettings.h"
+#include "library/dao/aifeaturedao.h"
+#include "library/trackcollection.h"
+#include "library/trackcollectionmanager.h"
+#include "track/keyutils.h"
+#include "track/track.h"
+#include "util/logger.h"
+
+namespace {
+mixxx::Logger kLogger("AiAutomixSelector");
+
+double cosineSimilarity(const QVector<float>& a, const QVector<float>& b) {
+    if (a.isEmpty() || a.size() != b.size()) {
+        return 0.0;
+    }
+    double dot = 0.0;
+    double normA = 0.0;
+    double normB = 0.0;
+    for (int i = 0; i < a.size(); ++i) {
+        dot += static_cast<double>(a[i]) * b[i];
+        normA += static_cast<double>(a[i]) * a[i];
+        normB += static_cast<double>(b[i]) * b[i];
+    }
+    if (normA <= 0.0 || normB <= 0.0) {
+        return 0.0;
+    }
+    return dot / (std::sqrt(normA) * std::sqrt(normB));
+}
+
+/// 0..1 harmonic compatibility between two musical keys.
+double keyCompatibility(mixxx::track::io::key::ChromaticKey from,
+        mixxx::track::io::key::ChromaticKey to) {
+    using namespace mixxx::track::io::key;
+    if (from == INVALID || to == INVALID) {
+        return 0.5; // unknown key -> neutral, don't penalize
+    }
+    if (from == to) {
+        return 1.0;
+    }
+    const QList<ChromaticKey> compatible = KeyUtils::getCompatibleKeys(from);
+    if (compatible.contains(to)) {
+        return 0.9;
+    }
+    const int steps = std::abs(KeyUtils::shortestStepsToCompatibleKey(from, to));
+    return std::max(0.0, 0.8 - 0.15 * steps);
+}
+
+} // namespace
+
+AiAutomixSelector::AiAutomixSelector(UserSettingsPointer pConfig,
+        TrackCollectionManager* pTrackCollectionManager)
+        : m_pConfig(std::move(pConfig)),
+          m_pTrackCollectionManager(pTrackCollectionManager) {
+}
+
+double AiAutomixSelector::scoreTransition(
+        const TrackPointer& pFrom, const TrackPointer& pTo) const {
+    if (!pFrom || !pTo) {
+        return -1.0;
+    }
+
+    // --- BPM (hard filter + score) ---
+    const double bpmFrom = pFrom->getBpm();
+    const double bpmTo = pTo->getBpm();
+    const double maxFrac = mixxx::ai::maxBpmFraction(m_pConfig);
+    double bpmScore = 1.0;
+    if (bpmFrom > 0.0 && bpmTo > 0.0) {
+        const double frac = std::abs(bpmTo - bpmFrom) / bpmFrom;
+        if (frac > maxFrac) {
+            return -1.0; // too far apart to beat-match -> reject
+        }
+        bpmScore = 1.0 - frac / maxFrac;
+    }
+
+    // --- Key (harmonic mixing) ---
+    const double keyScore = keyCompatibility(pFrom->getKey(), pTo->getKey());
+
+    // --- Embedding similarity + energy continuity (from stored AI features) ---
+    double embeddingScore = 0.5; // neutral when features are missing
+    double energyScore = 0.5;
+    TrackCollection* pCollection = m_pTrackCollectionManager
+            ? m_pTrackCollectionManager->internalCollection()
+            : nullptr;
+    if (pCollection) {
+        AiFeatureDao& dao = pCollection->getAiFeatureDAO();
+        TrackAiFeatures fromFeatures;
+        TrackAiFeatures toFeatures;
+        const bool haveFrom = pFrom->getId().isValid() &&
+                dao.getFeatures(pFrom->getId(), &fromFeatures);
+        const bool haveTo = pTo->getId().isValid() &&
+                dao.getFeatures(pTo->getId(), &toFeatures);
+        if (haveFrom && haveTo) {
+            if (fromFeatures.embedding.size() == toFeatures.embedding.size() &&
+                    !fromFeatures.embedding.isEmpty()) {
+                const double cosine = cosineSimilarity(
+                        fromFeatures.embedding, toFeatures.embedding);
+                embeddingScore = (cosine + 1.0) / 2.0; // map [-1,1] -> [0,1]
+            }
+            energyScore = 1.0 -
+                    std::min(1.0, std::abs(fromFeatures.energy - toFeatures.energy));
+        }
+    }
+
+    const mixxx::ai::ScorerWeights w = mixxx::ai::scorerWeights(m_pConfig);
+    const double weighted = w.embedding * embeddingScore +
+            w.key * keyScore +
+            w.bpm * bpmScore +
+            w.energy * energyScore;
+    const double weightSum = w.embedding + w.key + w.bpm + w.energy;
+    return weightSum > 0.0 ? weighted / weightSum : 0.0;
+}
+
+TrackPointer AiAutomixSelector::selectBestNext(const TrackPointer& pCurrent,
+        const QList<TrackPointer>& candidates) const {
+    if (!mixxx::ai::isAutomixEnabled(m_pConfig)) {
+        return TrackPointer();
+    }
+    if (!pCurrent || candidates.isEmpty()) {
+        return TrackPointer();
+    }
+
+    TrackPointer best;
+    double bestScore = -1.0;
+    for (const TrackPointer& pCandidate : candidates) {
+        if (!pCandidate || pCandidate == pCurrent) {
+            continue;
+        }
+        const double score = scoreTransition(pCurrent, pCandidate);
+        if (score > bestScore) {
+            bestScore = score;
+            best = pCandidate;
+        }
+    }
+    if (best) {
+        kLogger.debug() << "AI Automix picked" << best->getLocation()
+                        << "score=" << bestScore;
+    }
+    return best;
+}

@@ -10,6 +10,7 @@
 #include "control/controlpushbutton.h"
 #include "control/pollingcontrolproxy.h"
 #include "engine/channels/enginechannel.h"
+#include "library/autodj/aiautomixselector.h"
 #include "library/playlisttablemodel.h"
 #include "preferences/usersettings.h"
 #include "track/track_decl.h"
@@ -284,7 +285,12 @@ class AutoDJProcessor : public QObject {
     // present.
     bool removeTrackFromTopOfQueue(TrackPointer pTrack);
     void maybeFillRandomTracks();
+    // When AI Automix is enabled, reorder the AutoDJ queue so the track that
+    // best follows the one currently playing is on top.
+    void maybeReorderQueueForAiAutomix();
     UserSettingsPointer m_pConfig;
+    TrackCollectionManager* m_pTrackCollectionManager;
+    std::unique_ptr<AiAutomixSelector> m_pAiSelector;
     parented_ptr<PlaylistTableModel> m_pAutoDJTableModel;
 
     AutoDJState m_eState;
