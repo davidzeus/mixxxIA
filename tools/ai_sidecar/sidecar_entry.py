@@ -7,6 +7,12 @@ Host/port can be overridden via the MIXXX_AI_HOST / MIXXX_AI_PORT env vars.
 """
 
 import os
+import sys
+
+# The embeddable Python distribution runs in isolated mode and does not add the
+# script's own directory to sys.path, so do it explicitly before importing the
+# sidecar modules (server/embedder/llm live next to this file).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import uvicorn
 
