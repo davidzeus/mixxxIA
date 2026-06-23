@@ -934,6 +934,9 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/library/analysis/analysislibrarytablemodel.cpp
   src/library/analysis/dlganalysis.cpp
   src/library/analysis/dlganalysis.ui
+  src/library/airecommendfeature.cpp
+  src/library/airecommendmodel.cpp
+  src/library/aitrackadvisor.cpp
   src/library/autodj/aiautomixselector.cpp
   src/library/autodj/autodjfeature.cpp
   src/library/autodj/autodjprocessor.cpp
