@@ -1,0 +1,19 @@
+# Mixxx AI sidecar — Python dependencies
+#
+# Core service (always required):
+fastapi>=0.110
+uvicorn[standard]>=0.27
+numpy>=1.24
+librosa>=0.10        # audio loading + DSP fallback features
+soundfile>=0.12      # backend for librosa on most formats
+pydantic>=2.5
+
+# Audio embedding model (recommended — high quality embeddings + zero-shot genre).
+# If these are not installed the sidecar automatically falls back to the
+# librosa DSP embedder (lower quality but zero heavy dependencies).
+#
+#   laion-clap>=1.1.4
+#   torch>=2.1
+#
+# Install the recommended path with:
+#   pip install -r requirements.txt laion-clap torch
