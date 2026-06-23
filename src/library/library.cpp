@@ -6,7 +6,10 @@
 
 #include "control/controlobject.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
+#include "library/airecommendfeature.h"
+#include "library/aitrackadvisor.h"
 #include "library/analysis/analysisfeature.h"
+#include "library/autodj/aiautomixselector.h"
 #include "library/autodj/autodjfeature.h"
 #include "library/banshee/bansheefeature.h"
 #include "library/browse/browsefeature.h"
@@ -99,6 +102,15 @@ Library::Library(
 #endif
 
     addFeature(new AutoDJFeature(this, m_pConfig, pPlayerManager));
+
+    // AI track recommendation panel — shows compatible tracks for the
+    // currently playing deck.
+    {
+        auto* pSelector = new AiAutomixSelector(m_pConfig, pTrackCollectionManager);
+        auto* pAdvisor = new AiTrackAdvisor(
+                pPlayerManager, pTrackCollectionManager, pSelector, this);
+        addFeature(new AiRecommendFeature(this, m_pConfig, pAdvisor));
+    }
 
     m_pPlaylistFeature = new PlaylistFeature(this, UserSettingsPointer(m_pConfig));
     addFeature(m_pPlaylistFeature);

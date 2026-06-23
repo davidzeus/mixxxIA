@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include <QPair>
+
 #include "ai/aisettings.h"
 #include "library/dao/aifeaturedao.h"
 #include "library/trackcollection.h"
@@ -77,31 +79,35 @@ QString AiAutomixSelector::storedGenre(const TrackPointer& pTrack) const {
     return QString();
 }
 
-double AiAutomixSelector::scoreTransition(
+TransitionScoreBreakdown AiAutomixSelector::computeScores(
         const TrackPointer& pFrom, const TrackPointer& pTo) const {
+    TransitionScoreBreakdown bd;
     if (!pFrom || !pTo) {
-        return -1.0;
+        bd.rejected = true;
+        return bd;
     }
 
     // --- BPM (hard filter + score) ---
     const double bpmFrom = pFrom->getBpm();
     const double bpmTo = pTo->getBpm();
     const double maxFrac = mixxx::ai::maxBpmFraction(m_pConfig);
-    double bpmScore = 1.0;
+    bd.bpmScore = 1.0;
     if (bpmFrom > 0.0 && bpmTo > 0.0) {
         const double frac = std::abs(bpmTo - bpmFrom) / bpmFrom;
         if (frac > maxFrac) {
-            return -1.0; // too far apart to beat-match -> reject
+            bd.rejected = true;
+            bd.overall = -1.0;
+            return bd;
         }
-        bpmScore = 1.0 - frac / maxFrac;
+        bd.bpmScore = 1.0 - frac / maxFrac;
     }
 
     // --- Key (harmonic mixing) ---
-    const double keyScore = keyCompatibility(pFrom->getKey(), pTo->getKey());
+    bd.keyScore = keyCompatibility(pFrom->getKey(), pTo->getKey());
 
     // --- Embedding similarity + energy continuity (from stored AI features) ---
-    double embeddingScore = 0.5; // neutral when features are missing
-    double energyScore = 0.5;
+    bd.embeddingScore = 0.5; // neutral when features are missing
+    bd.energyScore = 0.5;
     TrackCollection* pCollection = m_pTrackCollectionManager
             ? m_pTrackCollectionManager->internalCollection()
             : nullptr;
@@ -118,20 +124,120 @@ double AiAutomixSelector::scoreTransition(
                     !fromFeatures.embedding.isEmpty()) {
                 const double cosine = cosineSimilarity(
                         fromFeatures.embedding, toFeatures.embedding);
-                embeddingScore = (cosine + 1.0) / 2.0; // map [-1,1] -> [0,1]
+                bd.embeddingScore = (cosine + 1.0) / 2.0; // map [-1,1] -> [0,1]
             }
-            energyScore = 1.0 -
+            bd.energyScore = 1.0 -
                     std::min(1.0, std::abs(fromFeatures.energy - toFeatures.energy));
         }
     }
 
     const mixxx::ai::ScorerWeights w = mixxx::ai::scorerWeights(m_pConfig);
-    const double weighted = w.embedding * embeddingScore +
-            w.key * keyScore +
-            w.bpm * bpmScore +
-            w.energy * energyScore;
+    const double weighted = w.embedding * bd.embeddingScore +
+            w.key * bd.keyScore +
+            w.bpm * bd.bpmScore +
+            w.energy * bd.energyScore;
     const double weightSum = w.embedding + w.key + w.bpm + w.energy;
-    return weightSum > 0.0 ? weighted / weightSum : 0.0;
+    bd.overall = weightSum > 0.0 ? weighted / weightSum : 0.0;
+    return bd;
+}
+
+double AiAutomixSelector::scoreTransition(
+        const TrackPointer& pFrom, const TrackPointer& pTo) const {
+    return computeScores(pFrom, pTo).overall;
+}
+
+TransitionScoreBreakdown AiAutomixSelector::scoreTransitionDetailed(
+        const TrackPointer& pFrom, const TrackPointer& pTo) const {
+    return computeScores(pFrom, pTo);
+}
+
+TransitionScoreBreakdown AiAutomixSelector::computeScoresFromFeatures(
+        const TrackPointer& pFrom,
+        const TrackAiFeatures& fromFeat,
+        const TrackPointer& pTo,
+        const TrackAiFeatures& toFeat) const {
+    TransitionScoreBreakdown bd;
+    if (!pFrom || !pTo) {
+        bd.rejected = true;
+        return bd;
+    }
+
+    // --- BPM (hard filter + score) ---
+    const double bpmFrom = pFrom->getBpm();
+    const double bpmTo = pTo->getBpm();
+    const double maxFrac = mixxx::ai::maxBpmFraction(m_pConfig);
+    bd.bpmScore = 1.0;
+    if (bpmFrom > 0.0 && bpmTo > 0.0) {
+        const double frac = std::abs(bpmTo - bpmFrom) / bpmFrom;
+        if (frac > maxFrac) {
+            bd.rejected = true;
+            bd.overall = -1.0;
+            return bd;
+        }
+        bd.bpmScore = 1.0 - frac / maxFrac;
+    }
+
+    // --- Key (harmonic mixing) ---
+    bd.keyScore = keyCompatibility(pFrom->getKey(), pTo->getKey());
+
+    // --- Embedding + energy from pre-fetched features ---
+    bd.embeddingScore = 0.5;
+    bd.energyScore = 0.5;
+    if (fromFeat.isValid() && toFeat.isValid()) {
+        if (fromFeat.embedding.size() == toFeat.embedding.size() &&
+                !fromFeat.embedding.isEmpty()) {
+            const double cosine =
+                    cosineSimilarity(fromFeat.embedding, toFeat.embedding);
+            bd.embeddingScore = (cosine + 1.0) / 2.0;
+        }
+        bd.energyScore = 1.0 -
+                std::min(1.0, std::abs(fromFeat.energy - toFeat.energy));
+    }
+
+    const mixxx::ai::ScorerWeights w = mixxx::ai::scorerWeights(m_pConfig);
+    const double weighted = w.embedding * bd.embeddingScore +
+            w.key * bd.keyScore +
+            w.bpm * bd.bpmScore +
+            w.energy * bd.energyScore;
+    const double weightSum = w.embedding + w.key + w.bpm + w.energy;
+    bd.overall = weightSum > 0.0 ? weighted / weightSum : 0.0;
+    return bd;
+}
+
+QList<TrackRecommendation> AiAutomixSelector::getTopMatches(
+        const TrackPointer& pFrom,
+        const TrackAiFeatures& fromFeatures,
+        const QList<QPair<TrackPointer, TrackAiFeatures>>& candidates,
+        int maxResults) const {
+    QList<TrackRecommendation> results;
+    if (!pFrom || candidates.isEmpty()) {
+        return results;
+    }
+    results.reserve(candidates.size());
+    for (const auto& pair : candidates) {
+        const TrackPointer& pTo = pair.first;
+        if (!pTo || pTo == pFrom) {
+            continue;
+        }
+        TransitionScoreBreakdown bd =
+                computeScoresFromFeatures(pFrom, fromFeatures, pTo, pair.second);
+        if (bd.rejected) {
+            continue;
+        }
+        TrackRecommendation rec;
+        rec.track = pTo;
+        rec.scores = bd;
+        rec.aiFeatures = pair.second;
+        results.append(rec);
+    }
+    std::sort(results.begin(), results.end(),
+            [](const TrackRecommendation& a, const TrackRecommendation& b) {
+                return a.scores.overall > b.scores.overall;
+            });
+    if (results.size() > maxResults) {
+        results.resize(maxResults);
+    }
+    return results;
 }
 
 TrackPointer AiAutomixSelector::selectBestNext(const TrackPointer& pCurrent,
