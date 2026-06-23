@@ -122,8 +122,14 @@ def health() -> dict:
 
 @app.post("/embed", response_model=EmbedResponse)
 def embed(req: EmbedRequest) -> EmbedResponse:
+    logger.info("[embed] solicitud: %s", req.path or "(muestras PCM)")
     try:
-        return _to_response(_analyze(req))
+        result = _analyze(req)
+        logger.info(
+            "[embed] OK: dim=%d genero=%s energia=%.2f device=%s archivo=%s",
+            result.dim, result.genre, result.energy or 0.0,
+            getattr(get_embedder(), "device", "cpu"), req.path or "(pcm)")
+        return _to_response(result)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -150,6 +156,8 @@ class ResolveGenreResponse(BaseModel):
 
 @app.post("/resolve_genre", response_model=ResolveGenreResponse)
 def resolve_genre(req: ResolveGenreRequest) -> ResolveGenreResponse:
+    logger.info("[resolve_genre] proveedor=%s peticion=%r generos=%s actual=%s",
+                req.provider, req.request, req.available_genres, req.current_genre)
     if not req.available_genres:
         raise HTTPException(status_code=400, detail="no available genres given")
     try:
@@ -164,6 +172,8 @@ def resolve_genre(req: ResolveGenreRequest) -> ResolveGenreResponse:
     except Exception as exc:  # noqa: BLE001
         logger.exception("resolve_genre failed")
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    logger.info("[resolve_genre] -> genero=%s confianza=%.2f",
+                result.get("target_genre"), result.get("confidence", 0.0))
     return ResolveGenreResponse(**result)
 
 

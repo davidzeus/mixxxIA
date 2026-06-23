@@ -19,7 +19,7 @@ struct ProviderItem {
 
 // Order must stay in sync with the combobox population below.
 const ProviderItem kProviders[] = {
-        {"Local (Ollama, auto-download)", "local"},
+        {"Local (Ollama, descarga automática)", "local"},
         {"Google (Gemini)", "google"},
         {"OpenAI (GPT)", "openai"},
         {"Anthropic (Claude)", "anthropic"},
@@ -31,7 +31,7 @@ constexpr int kProviderCount =
 
 bool showAiSettingsDialog(QWidget* pParent, const UserSettingsPointer& pConfig) {
     QDialog dialog(pParent);
-    dialog.setWindowTitle(QObject::tr("AI Automix settings"));
+    dialog.setWindowTitle(QObject::tr("Ajustes de Automix IA"));
 
     auto* pProvider = new QComboBox(&dialog);
     int currentIndex = 0;
@@ -49,17 +49,17 @@ bool showAiSettingsDialog(QWidget* pParent, const UserSettingsPointer& pConfig) 
     pApiKey->setEchoMode(QLineEdit::Password);
     pApiKey->setText(mixxx::ai::llmApiKey(pConfig));
     pApiKey->setPlaceholderText(
-            QObject::tr("API key (not needed for Local)"));
+            QObject::tr("API key (no necesaria para Local)"));
 
     auto* pModel = new QLineEdit(&dialog);
     pModel->setText(mixxx::ai::llmModel(pConfig));
-    pModel->setPlaceholderText(QObject::tr("(optional — uses a sensible default)"));
+    pModel->setPlaceholderText(QObject::tr("(opcional — usa un valor por defecto)"));
 
     auto* pInfo = new QLabel(
-            QObject::tr("The provider is used only to interpret plain-language "
-                        "requests (e.g. \"switch to reggaeton\").\n"
-                        "Audio embeddings always run locally and download their "
-                        "model automatically; a GPU is optional."),
+            QObject::tr("El proveedor solo se usa para interpretar peticiones en "
+                        "lenguaje natural (p. ej. «cambia a reggaetón»).\n"
+                        "Los embeddings de audio siempre son locales y descargan "
+                        "su modelo automáticamente; la GPU es opcional."),
             &dialog);
     pInfo->setWordWrap(true);
 
@@ -82,9 +82,9 @@ bool showAiSettingsDialog(QWidget* pParent, const UserSettingsPointer& pConfig) 
     QObject::connect(pButtons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
 
     auto* pForm = new QFormLayout();
-    pForm->addRow(QObject::tr("Provider:"), pProvider);
+    pForm->addRow(QObject::tr("Proveedor:"), pProvider);
     pForm->addRow(QObject::tr("API key:"), pApiKey);
-    pForm->addRow(QObject::tr("Model:"), pModel);
+    pForm->addRow(QObject::tr("Modelo:"), pModel);
 
     auto* pLayout = new QVBoxLayout(&dialog);
     pLayout->addLayout(pForm);

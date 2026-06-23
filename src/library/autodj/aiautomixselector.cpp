@@ -266,6 +266,11 @@ TrackPointer AiAutomixSelector::selectBestNext(const TrackPointer& pCurrent,
         }
     }
 
+    kLogger.info() << "[IA] Seleccionando siguiente tema. Sonando:"
+                   << pCurrent->getLocation()
+                   << "candidatos:" << pool.size()
+                   << "genero objetivo:" << (m_targetGenre.isEmpty() ? "(ninguno)" : m_targetGenre);
+
     TrackPointer best;
     double bestScore = -1.0;
     for (const TrackPointer& pCandidate : pool) {
@@ -273,14 +278,18 @@ TrackPointer AiAutomixSelector::selectBestNext(const TrackPointer& pCurrent,
             continue;
         }
         const double score = scoreTransition(pCurrent, pCandidate);
+        kLogger.debug() << "[IA]   candidato" << pCandidate->getLocation()
+                        << "score=" << score;
         if (score > bestScore) {
             bestScore = score;
             best = pCandidate;
         }
     }
     if (best) {
-        kLogger.debug() << "AI Automix picked" << best->getLocation()
-                        << "score=" << bestScore;
+        kLogger.info() << "[IA] Elegido:" << best->getLocation()
+                       << "score=" << bestScore;
+    } else {
+        kLogger.info() << "[IA] Ningun candidato compatible; se mantiene el orden actual";
     }
     return best;
 }

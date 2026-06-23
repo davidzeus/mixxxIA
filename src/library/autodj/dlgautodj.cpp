@@ -1,6 +1,7 @@
 #include "library/autodj/dlgautodj.h"
 
 #include <QComboBox>
+#include <QDebug>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -207,6 +208,8 @@ DlgAutoDJ::DlgAutoDJ(WLibrary* parent,
             &QCheckBox::toggled,
             this,
             [this](bool checked) {
+                qInfo() << "[IA] Automix IA" << (checked ? "ACTIVADO" : "desactivado")
+                        << "- recuerda Reanalizar la biblioteca para generar embeddings";
                 m_pConfig->setValue(
                         ConfigKey(mixxx::ai::kConfigGroup,
                                 QStringLiteral("Enabled")),
@@ -223,8 +226,10 @@ DlgAutoDJ::DlgAutoDJ(WLibrary* parent,
         const QString previous = comboBoxAiGenre->currentText();
         comboBoxAiGenre->blockSignals(true);
         comboBoxAiGenre->clear();
-        comboBoxAiGenre->addItem(tr("Any genre"));
-        comboBoxAiGenre->addItems(m_pAutoDJProcessor->aiAvailableGenres());
+        comboBoxAiGenre->addItem(tr("Cualquier género"));
+        const QStringList genres = m_pAutoDJProcessor->aiAvailableGenres();
+        qInfo() << "[IA] Géneros analizados en la biblioteca:" << genres.size();
+        comboBoxAiGenre->addItems(genres);
         const int idx = comboBoxAiGenre->findText(previous);
         comboBoxAiGenre->setCurrentIndex(idx >= 0 ? idx : 0);
         comboBoxAiGenre->blockSignals(false);
@@ -254,14 +259,16 @@ DlgAutoDJ::DlgAutoDJ(WLibrary* parent,
         if (text.isEmpty()) {
             return;
         }
+        qInfo() << "[IA] Petición en lenguaje natural:" << text;
         QString resolved;
         QString error;
         if (m_pAutoDJProcessor->applyAiNaturalLanguageRequest(
                     text, &resolved, &error)) {
+            qInfo() << "[IA] Género resuelto:" << (resolved.isEmpty() ? "(ninguno)" : resolved);
             if (resolved.isEmpty()) {
                 QMessageBox::information(this,
-                        tr("AI Automix"),
-                        tr("Couldn't map \"%1\" to a genre in your library.")
+                        tr("Automix IA"),
+                        tr("No pude asociar «%1» con un género de tu biblioteca.")
                                 .arg(text));
             } else {
                 const int idx = comboBoxAiGenre->findText(resolved);
@@ -272,7 +279,8 @@ DlgAutoDJ::DlgAutoDJ(WLibrary* parent,
                 }
             }
         } else {
-            QMessageBox::warning(this, tr("AI Automix"), error);
+            qWarning() << "[IA] Error en petición de lenguaje natural:" << error;
+            QMessageBox::warning(this, tr("Automix IA"), error);
         }
     };
     connect(pushButtonAiRequest,

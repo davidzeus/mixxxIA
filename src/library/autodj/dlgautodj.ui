@@ -205,12 +205,12 @@
          <enum>Qt::NoFocus</enum>
         </property>
         <property name="toolTip">
-         <string>When enabled, AutoDJ picks the next track using local AI: it
-keeps the genre/sound similar and respects key and BPM for smoother mixes.
-Requires tracks to be analyzed with AI features enabled.</string>
+         <string>Cuando está activo, AutoDJ elige el siguiente tema con IA local:
+mantiene el género/sonido similar y respeta tono y BPM para mezclas más suaves.
+Requiere reanalizar los temas con la IA activada.</string>
         </property>
         <property name="text">
-         <string>AI Automix</string>
+         <string>Automix IA</string>
         </property>
        </widget>
       </item>
@@ -220,18 +220,18 @@ Requires tracks to be analyzed with AI features enabled.</string>
          <enum>Qt::ClickFocus</enum>
         </property>
         <property name="toolTip">
-         <string>Steer AI Automix toward a genre. Only genres present in your
-analyzed library are listed.</string>
+         <string>Orienta el Automix IA hacia un género. Solo se listan los géneros
+presentes en tu biblioteca analizada.</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QLineEdit" name="lineEditAiRequest">
         <property name="toolTip">
-         <string>Type a request in plain language, e.g. "switch to reggaeton".</string>
+         <string>Escribe una petición en lenguaje natural, p. ej. «cambia a reggaetón».</string>
         </property>
         <property name="placeholderText">
-         <string>switch to reggaeton…</string>
+         <string>cambia a reggaetón…</string>
         </property>
        </widget>
       </item>
@@ -241,10 +241,10 @@ analyzed library are listed.</string>
          <enum>Qt::NoFocus</enum>
         </property>
         <property name="toolTip">
-         <string>Interpret the request with AI and steer Automix.</string>
+         <string>Interpreta la petición con IA y orienta el Automix.</string>
         </property>
         <property name="text">
-         <string>Ask AI</string>
+         <string>Preguntar IA</string>
         </property>
        </widget>
       </item>
@@ -254,11 +254,11 @@ analyzed library are listed.</string>
          <enum>Qt::NoFocus</enum>
         </property>
         <property name="toolTip">
-         <string>Choose the AI provider (local Ollama or a cloud service) and
-set its API key.</string>
+         <string>Elige el proveedor de IA (Ollama local o un servicio en la nube)
+y configura su API key.</string>
         </property>
         <property name="text">
-         <string>AI…</string>
+         <string>IA…</string>
         </property>
        </widget>
       </item>

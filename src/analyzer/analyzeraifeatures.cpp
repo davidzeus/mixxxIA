@@ -26,6 +26,7 @@ bool AnalyzerAiFeatures::initialize(const AnalyzerTrack& track,
     Q_UNUSED(frameLength);
 
     if (!mixxx::ai::isAnalysisEnabled(m_pConfig)) {
+        kLogger.info() << "[IA] Analisis IA desactivado; se omite el embedding";
         return false;
     }
     const TrackPointer pTrack = track.getTrack();
@@ -39,8 +40,10 @@ bool AnalyzerAiFeatures::initialize(const AnalyzerTrack& track,
     }
     // Skip tracks that already have AI features to avoid redundant work.
     if (m_trackId.isValid() && m_dao.hasFeatures(m_trackId)) {
+        kLogger.info() << "[IA] El tema ya tiene features IA; se omite:" << m_filePath;
         return false;
     }
+    kLogger.info() << "[IA] Programado para analisis IA:" << m_filePath;
     m_active = true;
     return true;
 }
@@ -63,20 +66,24 @@ void AnalyzerAiFeatures::storeResults(TrackPointer pTrack) {
         return;
     }
 
-    AiSidecarClient client(mixxx::ai::sidecarUrl(m_pConfig));
+    const QString url = mixxx::ai::sidecarUrl(m_pConfig);
+    kLogger.info() << "[IA] Enviando al sidecar" << url << "tema:" << m_filePath;
+    AiSidecarClient client(url);
     TrackAiFeatures features;
     QString error;
     if (!client.embedFile(m_filePath, &features, &error)) {
-        kLogger.warning() << "AI sidecar failed for" << m_filePath << ":" << error;
+        kLogger.warning() << "[IA] Fallo del sidecar para" << m_filePath << ":" << error;
         return;
     }
 
     features.trackId = trackId;
     features.analyzedAt = QDateTime::currentSecsSinceEpoch();
     if (m_dao.saveFeatures(features)) {
-        kLogger.debug() << "Stored AI features for" << m_filePath
-                        << "dim=" << features.embedding.size()
-                        << "genre=" << features.genre;
+        kLogger.info() << "[IA] Features IA guardadas para" << m_filePath
+                       << "dim=" << features.embedding.size()
+                       << "genero=" << features.genre;
+    } else {
+        kLogger.warning() << "[IA] No se pudieron guardar las features IA para" << m_filePath;
     }
 }
 

@@ -1,5 +1,7 @@
 #include "library/autodj/autodjprocessor.h"
 
+#include <QDebug>
+
 #include "ai/aisettings.h"
 #include "ai/aisidecarclient.h"
 #include "engine/channels/enginedeck.h"
@@ -912,7 +914,8 @@ bool AutoDJProcessor::applyAiNaturalLanguageRequest(const QString& text,
     const QStringList genres = aiAvailableGenres();
     if (genres.isEmpty()) {
         if (pError) {
-            *pError = tr("No analyzed genres yet. Analyze your library first.");
+            *pError = tr("Aún no hay géneros analizados. Reanaliza tu biblioteca "
+                         "con «AI Automix» activado primero.");
         }
         return false;
     }
@@ -983,6 +986,7 @@ void AutoDJProcessor::maybeReorderQueueForAiAutomix() {
     }
     const int bestRow = candidates.indexOf(pBest);
     if (bestRow > 0) {
+        qInfo() << "[IA] Reordenando cola AutoDJ: subo al tope la fila" << bestRow;
         m_pAutoDJTableModel->moveTrack(
                 m_pAutoDJTableModel->index(bestRow, 0),
                 m_pAutoDJTableModel->index(0, 0));
