@@ -74,5 +74,40 @@ inline double maxBpmFraction(const UserSettingsPointer& pConfig) {
     return (ok && v > 0.0) ? v : 0.08;
 }
 
+// --- Natural-language layer (Phase 5) -----------------------------------
+// The LLM is only used to interpret free-text requests like "switch to
+// reggaeton". It can run locally (Ollama, model auto-pulled) or via a cloud
+// provider (Google Gemini / OpenAI / Anthropic) with an API key.
+
+/// "local" | "google" | "openai" | "anthropic". Default "local".
+inline QString llmProvider(const UserSettingsPointer& pConfig) {
+    const QString p = pConfig->getValueString(
+            ConfigKey(kConfigGroup, QStringLiteral("LlmProvider")));
+    return p.isEmpty() ? QStringLiteral("local") : p;
+}
+
+/// API key for the chosen cloud provider (unused for "local").
+inline QString llmApiKey(const UserSettingsPointer& pConfig) {
+    return pConfig->getValueString(
+            ConfigKey(kConfigGroup, QStringLiteral("LlmApiKey")));
+}
+
+/// Optional explicit model id; empty means "let the sidecar pick a sensible
+/// default for the provider" (and auto-download it for local).
+inline QString llmModel(const UserSettingsPointer& pConfig) {
+    return pConfig->getValueString(
+            ConfigKey(kConfigGroup, QStringLiteral("LlmModel")));
+}
+
+/// Whether the natural-language request box is usable (a provider is local,
+/// or a cloud provider has an API key configured).
+inline bool isNaturalLanguageEnabled(const UserSettingsPointer& pConfig) {
+    if (!isEnabled(pConfig)) {
+        return false;
+    }
+    return llmProvider(pConfig) == QStringLiteral("local") ||
+            !llmApiKey(pConfig).isEmpty();
+}
+
 } // namespace ai
 } // namespace mixxx

@@ -50,6 +50,29 @@ Mixxx ──HTTP──> tools/ai_sidecar (FastAPI, localhost)
 | `WeightKey`      | 0.2     | Scorer weight: harmonic key compat       |
 | `WeightBpm`      | 0.2     | Scorer weight: BPM closeness             |
 | `WeightEnergy`   | 0.1     | Scorer weight: energy continuity         |
+| `LlmProvider`    | local   | NL provider: local / google / openai / anthropic |
+| `LlmApiKey`      | (empty) | API key for the chosen cloud provider    |
+| `LlmModel`       | (empty) | Optional model id; empty = provider default |
+
+## Natural-language requests (Phase 5)
+
+In the AutoDJ panel:
+- **Genre selector** — a dropdown populated only with genres present in your
+  analyzed library; pick one to steer Automix toward it ("Any genre" clears it).
+- **"Ask AI" box** — type a request like *"switch to reggaeton"*; the LLM maps
+  it to one of your library's genres and sets it as the target.
+- **"AI…" button** — choose the LLM provider and enter its API key.
+
+The LLM only interprets text into a target **genre** (constrained to genres you
+actually have). It never invents a genre you don't own. Audio embeddings remain
+fully local. Provider options:
+
+| Provider  | Needs key | Model auto-download |
+|-----------|-----------|---------------------|
+| local (Ollama) | no   | yes (Ollama pulls the model on first use) |
+| google (Gemini)| yes  | n/a (cloud)         |
+| openai (GPT)   | yes  | n/a (cloud)         |
+| anthropic (Claude) | yes | n/a (cloud)      |
 
 ## Why local (Ollama vs cloud)?
 
@@ -66,4 +89,5 @@ private. An optional Ollama layer for natural-language requests
 - [x] Phase 2 — `AnalyzerAiFeatures` populates embeddings during analysis
 - [x] Phase 3 — `AiAutomixSelector` reorders the AutoDJ queue
 - [x] Phase 4 — AI Automix toggle in the AutoDJ panel
-- [ ] Phase 5 — optional Ollama re-ranking / natural-language requests
+- [x] Phase 5 — genre selector + natural-language genre requests
+      (local Ollama or cloud Google/OpenAI/Anthropic, configurable API key)

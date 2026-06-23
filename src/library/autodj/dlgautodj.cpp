@@ -1,10 +1,12 @@
 #include "library/autodj/dlgautodj.h"
 
+#include <QComboBox>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMessageBox>
 
 #include "ai/aisettings.h"
+#include "ai/aisettingsdialog.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "library/library.h"
 #include "library/playlisttablemodel.h"
@@ -213,6 +215,83 @@ DlgAutoDJ::DlgAutoDJ(WLibrary* parent,
                         ConfigKey(mixxx::ai::kConfigGroup,
                                 QStringLiteral("AutomixEnabled")),
                         checked);
+            });
+
+    // AI Automix genre steering: a select populated only with genres present
+    // in the analyzed library (so an unavailable genre can't be requested).
+    const auto populateAiGenres = [this]() {
+        const QString previous = comboBoxAiGenre->currentText();
+        comboBoxAiGenre->blockSignals(true);
+        comboBoxAiGenre->clear();
+        comboBoxAiGenre->addItem(tr("Any genre"));
+        comboBoxAiGenre->addItems(m_pAutoDJProcessor->aiAvailableGenres());
+        const int idx = comboBoxAiGenre->findText(previous);
+        comboBoxAiGenre->setCurrentIndex(idx >= 0 ? idx : 0);
+        comboBoxAiGenre->blockSignals(false);
+    };
+    populateAiGenres();
+    connect(comboBoxAiGenre,
+            &QComboBox::currentTextChanged,
+            this,
+            [this](const QString& text) {
+                // Index 0 ("Any genre") clears the target.
+                m_pAutoDJProcessor->setAiTargetGenre(
+                        comboBoxAiGenre->currentIndex() <= 0 ? QString() : text);
+            });
+    // Refresh the genre list whenever AI Automix is (re)enabled.
+    connect(checkBoxAiAutomix,
+            &QCheckBox::toggled,
+            this,
+            [populateAiGenres](bool checked) {
+                if (checked) {
+                    populateAiGenres();
+                }
+            });
+
+    // Natural-language request: interpret free text into a target genre.
+    const auto doAiRequest = [this]() {
+        const QString text = lineEditAiRequest->text().trimmed();
+        if (text.isEmpty()) {
+            return;
+        }
+        QString resolved;
+        QString error;
+        if (m_pAutoDJProcessor->applyAiNaturalLanguageRequest(
+                    text, &resolved, &error)) {
+            if (resolved.isEmpty()) {
+                QMessageBox::information(this,
+                        tr("AI Automix"),
+                        tr("Couldn't map \"%1\" to a genre in your library.")
+                                .arg(text));
+            } else {
+                const int idx = comboBoxAiGenre->findText(resolved);
+                if (idx >= 0) {
+                    comboBoxAiGenre->blockSignals(true);
+                    comboBoxAiGenre->setCurrentIndex(idx);
+                    comboBoxAiGenre->blockSignals(false);
+                }
+            }
+        } else {
+            QMessageBox::warning(this, tr("AI Automix"), error);
+        }
+    };
+    connect(pushButtonAiRequest,
+            &QPushButton::clicked,
+            this,
+            [doAiRequest](bool) {
+                doAiRequest();
+            });
+    connect(lineEditAiRequest,
+            &QLineEdit::returnPressed,
+            this,
+            [doAiRequest]() {
+                doAiRequest();
+            });
+    connect(pushButtonAiSettings,
+            &QPushButton::clicked,
+            this,
+            [this](bool) {
+                showAiSettingsDialog(this, m_pConfig);
             });
 
     // Setup DlgAutoDJ UI based on the current AutoDJProcessor state. Keep in

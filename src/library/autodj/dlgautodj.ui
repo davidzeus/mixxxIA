@@ -215,6 +215,54 @@ Requires tracks to be analyzed with AI features enabled.</string>
        </widget>
       </item>
       <item>
+       <widget class="QComboBox" name="comboBoxAiGenre">
+        <property name="focusPolicy">
+         <enum>Qt::ClickFocus</enum>
+        </property>
+        <property name="toolTip">
+         <string>Steer AI Automix toward a genre. Only genres present in your
+analyzed library are listed.</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineEditAiRequest">
+        <property name="toolTip">
+         <string>Type a request in plain language, e.g. "switch to reggaeton".</string>
+        </property>
+        <property name="placeholderText">
+         <string>switch to reggaeton…</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonAiRequest">
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="toolTip">
+         <string>Interpret the request with AI and steer Automix.</string>
+        </property>
+        <property name="text">
+         <string>Ask AI</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonAiSettings">
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="toolTip">
+         <string>Choose the AI provider (local Ollama or a cloud service) and
+set its API key.</string>
+        </property>
+        <property name="text">
+         <string>AI…</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer_3">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>

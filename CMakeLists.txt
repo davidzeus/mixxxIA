@@ -724,6 +724,7 @@ set(CLANG_TIDY "" CACHE STRING "CMAKE_CXX_CLANG_TIDY equivalent that only applie
 
 # Mixxx itself
 add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
+  src/ai/aisettingsdialog.cpp
   src/ai/aisidecarclient.cpp
   src/analyzer/analyzeraifeatures.cpp
   src/analyzer/analyzerbeats.cpp

@@ -131,6 +131,50 @@ bool AiSidecarClient::embedFile(const QString& filePath,
     return true;
 }
 
+bool AiSidecarClient::resolveGenre(const QString& request,
+        const QString& currentGenre,
+        const QStringList& availableGenres,
+        const QString& provider,
+        const QString& apiKey,
+        const QString& model,
+        QString* pTargetGenre,
+        QString* pError) const {
+    QNetworkAccessManager nam;
+    QNetworkRequest networkRequest{
+            QUrl(m_baseUrl + QStringLiteral("/resolve_genre"))};
+    networkRequest.setHeader(QNetworkRequest::ContentTypeHeader,
+            QStringLiteral("application/json"));
+
+    QJsonArray genresArray;
+    for (const QString& genre : availableGenres) {
+        genresArray.append(genre);
+    }
+    QJsonObject body;
+    body.insert(QStringLiteral("request"), request);
+    body.insert(QStringLiteral("current_genre"), currentGenre);
+    body.insert(QStringLiteral("available_genres"), genresArray);
+    body.insert(QStringLiteral("provider"), provider);
+    body.insert(QStringLiteral("api_key"), apiKey);
+    body.insert(QStringLiteral("model"), model);
+    const QByteArray postBody = QJsonDocument(body).toJson(QJsonDocument::Compact);
+
+    QByteArray response;
+    if (!blockingRequest(&nam, networkRequest, postBody, m_timeoutMs, &response, pError)) {
+        return false;
+    }
+    const QJsonDocument doc = QJsonDocument::fromJson(response);
+    if (!doc.isObject()) {
+        if (pError) {
+            *pError = QStringLiteral("AI sidecar returned malformed JSON");
+        }
+        return false;
+    }
+    if (pTargetGenre) {
+        *pTargetGenre = doc.object().value(QStringLiteral("target_genre")).toString();
+    }
+    return true;
+}
+
 bool AiSidecarClient::checkHealth(QString* pBackend) const {
     QNetworkAccessManager nam;
     QNetworkRequest request{QUrl(m_baseUrl + QStringLiteral("/health"))};

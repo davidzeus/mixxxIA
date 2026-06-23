@@ -7,6 +7,7 @@ numpy>=1.24
 librosa>=0.10        # audio loading + DSP fallback features
 soundfile>=0.12      # backend for librosa on most formats
 pydantic>=2.5
+requests>=2.31       # LLM provider calls (Ollama/Google/OpenAI/Anthropic)
 
 # Audio embedding model (recommended — high quality embeddings + zero-shot genre).
 # If these are not installed the sidecar automatically falls back to the

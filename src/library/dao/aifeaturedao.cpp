@@ -148,6 +148,26 @@ bool AiFeatureDao::hasFeatures(TrackId trackId) const {
     return query.next();
 }
 
+QStringList AiFeatureDao::getDistinctGenres() const {
+    QStringList genres;
+    if (!m_database.isOpen()) {
+        return genres;
+    }
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral(
+            "SELECT DISTINCT genre FROM %1 WHERE genre IS NOT NULL AND "
+            "genre <> '' ORDER BY genre COLLATE NOCASE")
+                          .arg(kTableName));
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query) << "Failed to load distinct AI genres";
+        return genres;
+    }
+    while (query.next()) {
+        genres.append(query.value(0).toString());
+    }
+    return genres;
+}
+
 bool AiFeatureDao::deleteFeatures(TrackId trackId) {
     if (!m_database.isOpen() || !trackId.isValid()) {
         return false;

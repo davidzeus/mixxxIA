@@ -35,7 +35,19 @@ class AiAutomixSelector {
     /// far apart).
     double scoreTransition(const TrackPointer& pFrom, const TrackPointer& pTo) const;
 
+    /// Steer Automix toward a genre (e.g. set from the genre selector or a
+    /// natural-language request). Empty string clears the target. When set,
+    /// candidates of that genre are strongly preferred.
+    void setTargetGenre(const QString& genre);
+    QString targetGenre() const {
+        return m_targetGenre;
+    }
+
   private:
+    /// Stored AI genre for a track, or empty if none.
+    QString storedGenre(const TrackPointer& pTrack) const;
+
     UserSettingsPointer m_pConfig;
     TrackCollectionManager* m_pTrackCollectionManager;
+    QString m_targetGenre;
 };

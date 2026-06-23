@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
 
 #include "library/dao/aifeaturedao.h"
 
@@ -28,6 +29,19 @@ class AiSidecarClient {
     /// Returns true if the sidecar answers /health. Optionally reports the
     /// active backend (e.g. "clap-htsat-unfused-v1").
     bool checkHealth(QString* pBackend = nullptr) const;
+
+    /// Resolve a free-text request (e.g. "switch to reggaeton") to one of the
+    /// available genres via the configured LLM provider. On success sets
+    /// *pTargetGenre (may be empty if the LLM couldn't map it) and returns
+    /// true. The result is always one of availableGenres or empty.
+    bool resolveGenre(const QString& request,
+            const QString& currentGenre,
+            const QStringList& availableGenres,
+            const QString& provider,
+            const QString& apiKey,
+            const QString& model,
+            QString* pTargetGenre,
+            QString* pError = nullptr) const;
 
   private:
     QString m_baseUrl;

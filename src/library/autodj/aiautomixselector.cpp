@@ -58,6 +58,25 @@ AiAutomixSelector::AiAutomixSelector(UserSettingsPointer pConfig,
           m_pTrackCollectionManager(pTrackCollectionManager) {
 }
 
+void AiAutomixSelector::setTargetGenre(const QString& genre) {
+    m_targetGenre = genre.trimmed();
+}
+
+QString AiAutomixSelector::storedGenre(const TrackPointer& pTrack) const {
+    if (!pTrack || !pTrack->getId().isValid() || !m_pTrackCollectionManager) {
+        return QString();
+    }
+    TrackCollection* pCollection = m_pTrackCollectionManager->internalCollection();
+    if (!pCollection) {
+        return QString();
+    }
+    TrackAiFeatures features;
+    if (pCollection->getAiFeatureDAO().getFeatures(pTrack->getId(), &features)) {
+        return features.genre;
+    }
+    return QString();
+}
+
 double AiAutomixSelector::scoreTransition(
         const TrackPointer& pFrom, const TrackPointer& pTo) const {
     if (!pFrom || !pTo) {
@@ -124,9 +143,26 @@ TrackPointer AiAutomixSelector::selectBestNext(const TrackPointer& pCurrent,
         return TrackPointer();
     }
 
+    // If a target genre is set, restrict to candidates of that genre when at
+    // least one qualifies, so the requested genre change actually happens.
+    QList<TrackPointer> pool = candidates;
+    if (!m_targetGenre.isEmpty()) {
+        QList<TrackPointer> matching;
+        for (const TrackPointer& pCandidate : candidates) {
+            if (pCandidate &&
+                    storedGenre(pCandidate).compare(
+                            m_targetGenre, Qt::CaseInsensitive) == 0) {
+                matching.append(pCandidate);
+            }
+        }
+        if (!matching.isEmpty()) {
+            pool = matching;
+        }
+    }
+
     TrackPointer best;
     double bestScore = -1.0;
-    for (const TrackPointer& pCandidate : candidates) {
+    for (const TrackPointer& pCandidate : pool) {
         if (!pCandidate || pCandidate == pCurrent) {
             continue;
         }

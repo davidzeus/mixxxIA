@@ -2,6 +2,7 @@
 
 #include <QList>
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 #include "library/dao/dao.h"
@@ -48,6 +49,11 @@ class AiFeatureDao : public DAO {
 
     /// True if the track already has stored AI features.
     bool hasFeatures(TrackId trackId) const;
+
+    /// Distinct non-empty genres present across analyzed tracks, sorted.
+    /// Used to populate the AI Automix genre selector so the user can only
+    /// target genres that actually exist in the library.
+    QStringList getDistinctGenres() const;
 
     /// Remove AI features for a track (e.g. when the track is deleted).
     bool deleteFeatures(TrackId trackId);

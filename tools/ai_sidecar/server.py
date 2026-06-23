@@ -25,6 +25,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from embedder import EmbedResult, TARGET_SR, build_embedder
+import llm
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ai_sidecar.server")
@@ -129,6 +130,40 @@ def embed(req: EmbedRequest) -> EmbedResponse:
     except Exception as exc:  # noqa: BLE001
         logger.exception("embed failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+class ResolveGenreRequest(BaseModel):
+    request: str
+    current_genre: Optional[str] = None
+    available_genres: list[str] = []
+    provider: str = "local"
+    api_key: str = ""
+    model: str = ""
+
+
+class ResolveGenreResponse(BaseModel):
+    target_genre: Optional[str] = None
+    confidence: float = 0.0
+    reasoning: str = ""
+
+
+@app.post("/resolve_genre", response_model=ResolveGenreResponse)
+def resolve_genre(req: ResolveGenreRequest) -> ResolveGenreResponse:
+    if not req.available_genres:
+        raise HTTPException(status_code=400, detail="no available genres given")
+    try:
+        result = llm.resolve_genre(
+            request=req.request,
+            current_genre=req.current_genre or "",
+            available_genres=req.available_genres,
+            provider=req.provider,
+            api_key=req.api_key,
+            model=req.model,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("resolve_genre failed")
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return ResolveGenreResponse(**result)
 
 
 @app.post("/embed_batch", response_model=BatchResponse)

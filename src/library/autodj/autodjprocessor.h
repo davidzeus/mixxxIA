@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <memory>
 #include <vector>
 
@@ -195,6 +196,19 @@ class AutoDJProcessor : public QObject {
     }
 
     bool nextTrackLoaded();
+
+    // --- AI Automix (Phase 5) ---
+    // Genres present across analyzed tracks (for the genre selector).
+    QStringList aiAvailableGenres() const;
+    // Steer Automix toward a genre (empty clears it).
+    void setAiTargetGenre(const QString& genre);
+    QString aiTargetGenre() const;
+    // Interpret a free-text request ("switch to reggaeton") via the configured
+    // LLM and set the resulting target genre. Blocks on the network. Returns
+    // the resolved genre (empty if unresolved) and false on error.
+    bool applyAiNaturalLanguageRequest(const QString& text,
+            QString* pResolvedGenre,
+            QString* pError);
 
     void setTransitionTime(int seconds);
 

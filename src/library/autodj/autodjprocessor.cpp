@@ -1,7 +1,11 @@
 #include "library/autodj/autodjprocessor.h"
 
 #include "ai/aisettings.h"
+#include "ai/aisidecarclient.h"
 #include "engine/channels/enginedeck.h"
+#include "library/dao/aifeaturedao.h"
+#include "library/trackcollection.h"
+#include "library/trackcollectionmanager.h"
 #include "mixer/basetrackplayer.h"
 #include "mixer/playermanager.h"
 #include "moc_autodjprocessor.cpp"
@@ -879,6 +883,68 @@ void AutoDJProcessor::playerPositionChanged(DeckAttributes* pAttributes,
             // step is processed and we can stop the deck.
         }
     }
+}
+
+QStringList AutoDJProcessor::aiAvailableGenres() const {
+    if (!m_pTrackCollectionManager) {
+        return QStringList();
+    }
+    TrackCollection* pCollection = m_pTrackCollectionManager->internalCollection();
+    if (!pCollection) {
+        return QStringList();
+    }
+    return pCollection->getAiFeatureDAO().getDistinctGenres();
+}
+
+void AutoDJProcessor::setAiTargetGenre(const QString& genre) {
+    if (m_pAiSelector) {
+        m_pAiSelector->setTargetGenre(genre);
+    }
+}
+
+QString AutoDJProcessor::aiTargetGenre() const {
+    return m_pAiSelector ? m_pAiSelector->targetGenre() : QString();
+}
+
+bool AutoDJProcessor::applyAiNaturalLanguageRequest(const QString& text,
+        QString* pResolvedGenre,
+        QString* pError) {
+    const QStringList genres = aiAvailableGenres();
+    if (genres.isEmpty()) {
+        if (pError) {
+            *pError = tr("No analyzed genres yet. Analyze your library first.");
+        }
+        return false;
+    }
+
+    // Determine the genre currently playing (best effort).
+    QString currentGenre;
+    DeckAttributes* pFromDeck = getFromDeck();
+    if (pFromDeck) {
+        const TrackPointer pCurrent = pFromDeck->getLoadedTrack();
+        if (pCurrent) {
+            currentGenre = pCurrent->getGenre();
+        }
+    }
+
+    AiSidecarClient client(mixxx::ai::sidecarUrl(m_pConfig));
+    QString target;
+    const bool ok = client.resolveGenre(text,
+            currentGenre,
+            genres,
+            mixxx::ai::llmProvider(m_pConfig),
+            mixxx::ai::llmApiKey(m_pConfig),
+            mixxx::ai::llmModel(m_pConfig),
+            &target,
+            pError);
+    if (!ok) {
+        return false;
+    }
+    setAiTargetGenre(target);
+    if (pResolvedGenre) {
+        *pResolvedGenre = target;
+    }
+    return true;
 }
 
 void AutoDJProcessor::maybeReorderQueueForAiAutomix() {
