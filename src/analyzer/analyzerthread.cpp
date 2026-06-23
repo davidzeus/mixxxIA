@@ -2,6 +2,8 @@
 
 #include <mutex>
 
+#include "ai/aisettings.h"
+#include "analyzer/analyzeraifeatures.h"
 #include "analyzer/analyzerbeats.h"
 #include "analyzer/analyzerebur128.h"
 #include "analyzer/analyzergain.h"
@@ -93,14 +95,25 @@ void AnalyzerThread::doRun() {
     // before returning from this function.
     mixxx::DbConnectionPooler dbConnectionPooler;
 
-    if (m_modeFlags & AnalyzerModeFlags::WithWaveform) {
+    // A database connection is needed both for waveforms and for AI features
+    // (both persist to tables rather than to the Track object).
+    const bool aiFeaturesEnabled = mixxx::ai::isAnalysisEnabled(m_pConfig);
+    QSqlDatabase dbConnection;
+    if ((m_modeFlags & AnalyzerModeFlags::WithWaveform) || aiFeaturesEnabled) {
         dbConnectionPooler = mixxx::DbConnectionPooler(m_dbConnectionPool); // move assignment
-        if (!dbConnectionPooler.isPooling()) {
+        if (dbConnectionPooler.isPooling()) {
+            dbConnection = mixxx::DbConnectionPooled(m_dbConnectionPool);
+        } else {
             kLogger.warning()
                     << "Failed to obtain database connection for analyzer thread";
-            return;
+            // Waveform analysis cannot proceed without a connection.
+            if (m_modeFlags & AnalyzerModeFlags::WithWaveform) {
+                return;
+            }
         }
-        QSqlDatabase dbConnection = mixxx::DbConnectionPooled(m_dbConnectionPool);
+    }
+
+    if (m_modeFlags & AnalyzerModeFlags::WithWaveform) {
         m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerWaveform>(m_pConfig, dbConnection)));
     }
     if (AnalyzerGain::isEnabled(ReplayGainSettings(m_pConfig))) {
@@ -115,6 +128,10 @@ void AnalyzerThread::doRun() {
     m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerBeats>(m_pConfig, enforceBpmDetection)));
     m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerKey>(m_pConfig)));
     m_analyzers.push_back(AnalyzerWithState(std::make_unique<AnalyzerSilence>(m_pConfig)));
+    if (aiFeaturesEnabled && dbConnection.isValid()) {
+        m_analyzers.push_back(AnalyzerWithState(
+                std::make_unique<AnalyzerAiFeatures>(m_pConfig, dbConnection)));
+    }
     DEBUG_ASSERT(!m_analyzers.empty());
     kLogger.debug() << "Activated" << m_analyzers.size() << "analyzers";
 
