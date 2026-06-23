@@ -4,6 +4,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 
+#include "ai/aisettings.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "library/library.h"
 #include "library/playlisttablemodel.h"
@@ -196,6 +197,23 @@ DlgAutoDJ::DlgAutoDJ(WLibrary* parent,
             ConfigKey(kPreferenceGroupName, kRepeatPlaylistPreference));
     pushButtonRepeatPlaylist->setChecked(repeatPlaylist);
     slotRepeatPlaylistChanged(repeatPlaylist);
+
+    // AI Automix toggle. Enabling it turns on the AI master switch (so future
+    // analysis computes embeddings) and AI-driven next-track selection.
+    checkBoxAiAutomix->setChecked(mixxx::ai::isAutomixEnabled(m_pConfig));
+    connect(checkBoxAiAutomix,
+            &QCheckBox::toggled,
+            this,
+            [this](bool checked) {
+                m_pConfig->setValue(
+                        ConfigKey(mixxx::ai::kConfigGroup,
+                                QStringLiteral("Enabled")),
+                        checked);
+                m_pConfig->setValue(
+                        ConfigKey(mixxx::ai::kConfigGroup,
+                                QStringLiteral("AutomixEnabled")),
+                        checked);
+            });
 
     // Setup DlgAutoDJ UI based on the current AutoDJProcessor state. Keep in
     // mind that AutoDJ may already be active when DlgAutoDJ is created (due to

@@ -200,6 +200,21 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="checkBoxAiAutomix">
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="toolTip">
+         <string>When enabled, AutoDJ picks the next track using local AI: it
+keeps the genre/sound similar and respects key and BPM for smoother mixes.
+Requires tracks to be analyzed with AI features enabled.</string>
+        </property>
+        <property name="text">
+         <string>AI Automix</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer_3">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
