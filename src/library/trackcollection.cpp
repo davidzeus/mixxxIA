@@ -76,6 +76,7 @@ void TrackCollection::connectDatabase(const QSqlDatabase& database) {
     m_cueDao.initialize(database);
     m_directoryDao.initialize(database);
     m_analysisDao.initialize(database);
+    m_aiFeatureDao.initialize(database);
     m_libraryHashDao.initialize(database);
     m_crates.connectDatabase(database);
 }

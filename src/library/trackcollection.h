@@ -6,6 +6,7 @@
 #include <QSharedPointer>
 #include <QSqlDatabase>
 
+#include "library/dao/aifeaturedao.h"
 #include "library/dao/analysisdao.h"
 #include "library/dao/cuedao.h"
 #include "library/dao/directorydao.h"
@@ -67,6 +68,10 @@ class TrackCollection : public QObject,
     AnalysisDao& getAnalysisDAO() {
         DEBUG_ASSERT_QOBJECT_THREAD_AFFINITY(this);
         return m_analysisDao;
+    }
+    AiFeatureDao& getAiFeatureDAO() {
+        DEBUG_ASSERT_QOBJECT_THREAD_AFFINITY(this);
+        return m_aiFeatureDao;
     }
 
     void connectTrackSource(QSharedPointer<BaseTrackCache> pTrackSource);
@@ -171,6 +176,7 @@ class TrackCollection : public QObject,
     CueDAO m_cueDao;
     DirectoryDAO m_directoryDao;
     AnalysisDao m_analysisDao;
+    AiFeatureDao m_aiFeatureDao;
     LibraryHashDAO m_libraryHashDao;
     TrackDAO m_trackDao;
 

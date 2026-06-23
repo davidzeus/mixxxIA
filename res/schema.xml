@@ -584,4 +584,26 @@ reapplying those migrations.
       UPDATE library SET filetype='aiff' WHERE filetype='aif';
     </sql>
   </revision>
+  <revision version="40" min_compatible="3">
+    <description>
+      Add track_ai_features table for local-AI Automix: stores a per-track
+      audio embedding (float32 BLOB) plus genre/mood/energy/danceability
+      produced by the AI sidecar. Backwards compatible: older Mixxx versions
+      simply ignore this extra table.
+    </description>
+    <sql>
+      CREATE TABLE IF NOT EXISTS track_ai_features (
+        track_id INTEGER PRIMARY KEY REFERENCES library(id),
+        model_version TEXT NOT NULL,
+        embedding BLOB NOT NULL,
+        embedding_dim INTEGER NOT NULL DEFAULT 0,
+        genre TEXT,
+        genre_confidence REAL,
+        mood TEXT,
+        energy REAL,
+        danceability REAL,
+        analyzed_at INTEGER
+      );
+    </sql>
+  </revision>
 </schema>
