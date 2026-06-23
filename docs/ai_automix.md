@@ -22,6 +22,13 @@ Mixxx ──HTTP──> tools/ai_sidecar (FastAPI, localhost)
   AiAutomixSelector -> reorders the AutoDJ queue
 ```
 
+## Building (Windows)
+
+Run **`build_ai_windows.bat`** at the repo root (needs Visual Studio 2022 with
+the "Desktop development with C++" workload). It sets up MSVC, downloads
+Mixxx's prebuilt dependencies, then configures and builds into `build/`.
+For other platforms see the build commands in the project `README.md`.
+
 ## Setup
 
 1. Start the sidecar (see `tools/ai_sidecar/README.md`):
