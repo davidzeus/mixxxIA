@@ -115,6 +115,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "backend": embedder.model_version,
+        "device": getattr(embedder, "device", "cpu"),
         "target_sample_rate": TARGET_SR,
     }
 

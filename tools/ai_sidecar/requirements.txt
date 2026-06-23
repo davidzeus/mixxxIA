@@ -15,6 +15,13 @@ requests>=2.31       # LLM provider calls (Ollama/Google/OpenAI/Anthropic)
 #
 #   laion-clap>=1.1.4
 #   torch>=2.1
+#   torchvision           # required by laion-clap
 #
 # Install the recommended path with:
-#   pip install -r requirements.txt laion-clap torch
+#   pip install -r requirements.txt laion-clap torchvision torch
+#
+# GPU (optional, NVIDIA only): install the CUDA build of torch/torchvision so
+# the sidecar auto-uses the GPU when present (it falls back to CPU otherwise).
+# Only the NVIDIA driver is needed — the CUDA wheel bundles the runtime:
+#   pip install --force-reinstall --no-deps torch torchvision \
+#       --index-url https://download.pytorch.org/whl/cu124

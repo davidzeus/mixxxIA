@@ -58,6 +58,24 @@ class EmbedResult:
     extra: dict = field(default_factory=dict)
 
 
+def select_device() -> str:
+    """Pick the compute device automatically.
+
+    Uses an NVIDIA GPU (CUDA) when one is available and the installed torch
+    build supports it; otherwise falls back to CPU. Only NVIDIA/CUDA is
+    targeted on purpose — it's the most plug-and-play GPU path (the CUDA torch
+    wheel bundles the runtime, so only the NVIDIA driver is needed).
+    """
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:  # noqa: BLE001 - torch missing/broken -> CPU
+        pass
+    return "cpu"
+
+
 def _l2_normalize(vec: np.ndarray) -> np.ndarray:
     norm = np.linalg.norm(vec)
     if norm < 1e-9:
@@ -109,6 +127,7 @@ class LibrosaEmbedder:
     """Deterministic DSP feature embedder (no external model)."""
 
     model_version = "librosa-mfcc-chroma-v1"
+    device = "cpu"  # pure NumPy/DSP, no GPU involved
 
     def embed_file(self, path: str) -> EmbedResult:
         import librosa
@@ -150,7 +169,11 @@ class ClapEmbedder:
     def __init__(self) -> None:
         import laion_clap  # noqa: F401  (import errors handled by caller)
 
-        self._model = laion_clap.CLAP_Module(enable_fusion=False)
+        # Auto-select NVIDIA GPU if present, else CPU.
+        self.device = select_device()
+        logger.info("CLAP using device: %s", self.device)
+        self._model = laion_clap.CLAP_Module(
+                enable_fusion=False, device=self.device)
         self._model.load_ckpt()  # downloads default checkpoint on first run
         # Pre-compute text embeddings for the zero-shot vocabularies.
         self._genre_emb = self._embed_text(GENRE_PROMPTS)

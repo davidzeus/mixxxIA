@@ -34,6 +34,14 @@ compile_commands.json
 # Build and distribution directories for various build configurations
 /build*
 /install
+/dist
+
+# Mixxx AI sidecar local artifacts (venv, PyInstaller output, caches)
+/tools/ai_sidecar/.venv/
+/tools/ai_sidecar/dist_frozen/
+/tools/ai_sidecar/build_frozen/
+/tools/ai_sidecar/__pycache__/
+**/__pycache__/
 
 # Exclude unneeded files from GoogleTest library when updating our bundled
 # GoogleTest library in the lib/ directory
