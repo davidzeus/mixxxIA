@@ -5,6 +5,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkAccessManager>
+#include <QNetworkProxy>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QTimer>
@@ -84,6 +85,8 @@ bool AiSidecarClient::embedFile(const QString& filePath,
     }
 
     QNetworkAccessManager nam;
+    // The sidecar is always local; never route it through a system proxy.
+    nam.setProxy(QNetworkProxy::NoProxy);
     QNetworkRequest request{QUrl(m_baseUrl + QStringLiteral("/embed"))};
     request.setHeader(QNetworkRequest::ContentTypeHeader,
             QStringLiteral("application/json"));
@@ -140,6 +143,8 @@ bool AiSidecarClient::resolveGenre(const QString& request,
         QString* pTargetGenre,
         QString* pError) const {
     QNetworkAccessManager nam;
+    // The sidecar is always local; never route it through a system proxy.
+    nam.setProxy(QNetworkProxy::NoProxy);
     QNetworkRequest networkRequest{
             QUrl(m_baseUrl + QStringLiteral("/resolve_genre"))};
     networkRequest.setHeader(QNetworkRequest::ContentTypeHeader,
@@ -177,6 +182,8 @@ bool AiSidecarClient::resolveGenre(const QString& request,
 
 bool AiSidecarClient::checkHealth(QString* pBackend) const {
     QNetworkAccessManager nam;
+    // The sidecar is always local; never route it through a system proxy.
+    nam.setProxy(QNetworkProxy::NoProxy);
     QNetworkRequest request{QUrl(m_baseUrl + QStringLiteral("/health"))};
 
     QByteArray response;
