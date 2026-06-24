@@ -64,13 +64,13 @@ QVariant AiRecommendModel::data(const QModelIndex& index, int role) const {
         const QString bpmStr = bpm > 0.0
                 ? QString::number(bpm, 'f', 1)
                 : QStringLiteral("—");
-        return bpmStr + QStringLiteral(" · ") + pct(rec.scores.bpmScore);
+        return QString(bpmStr + QStringLiteral(" · ") + pct(rec.scores.bpmScore));
     }
     case ColKey: {
         const QString keyStr =
                 KeyUtils::keyToString(rec.track->getKey());
-        return (keyStr.isEmpty() ? QStringLiteral("—") : keyStr) +
-                QStringLiteral(" · ") + pct(rec.scores.keyScore);
+        return QString((keyStr.isEmpty() ? QStringLiteral("—") : keyStr) +
+                QStringLiteral(" · ") + pct(rec.scores.keyScore));
     }
     case ColGenre:
         return rec.aiFeatures.genre;
